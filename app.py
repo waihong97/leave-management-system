@@ -8,14 +8,19 @@ from datetime import datetime
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev')
 
-# Ensure the instance folder exists
-try:
-    os.makedirs('instance')
-except OSError:
-    pass
+# Get the absolute path to the instance folder
+basedir = os.path.abspath(os.path.dirname(__file__))
+instance_path = os.path.join(basedir, 'instance')
 
-# Configure database
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI', 'sqlite:///instance/leave_management.db')
+# Ensure the instance folder exists with proper permissions
+try:
+    os.makedirs(instance_path, mode=0o777, exist_ok=True)
+except OSError as e:
+    print(f"Error creating instance directory: {e}")
+
+# Configure database with absolute path
+db_path = os.path.join(instance_path, 'leave_management.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI', f'sqlite:///{db_path}')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -99,17 +104,30 @@ def logout():
 
 def init_db():
     with app.app_context():
-        db.create_all()
-        # Create admin user if it doesn't exist
-        admin = User.query.filter_by(username='admin').first()
-        if not admin:
-            admin = User(
-                username='admin',
-                password_hash=generate_password_hash('admin123'),
-                is_admin=True
-            )
-            db.session.add(admin)
-            db.session.commit()
+        try:
+            # Create all tables
+            db.create_all()
+            
+            # Create admin user if it doesn't exist
+            admin = User.query.filter_by(username='admin').first()
+            if not admin:
+                admin = User(
+                    username='admin',
+                    password_hash=generate_password_hash('admin123'),
+                    is_admin=True
+                )
+                db.session.add(admin)
+                db.session.commit()
+                print('Admin user created successfully')
+            
+            # Set proper permissions on the database file
+            if os.path.exists(db_path):
+                os.chmod(db_path, 0o666)
+                print(f'Database permissions set successfully: {db_path}')
+            
+        except Exception as e:
+            print(f'Error initializing database: {e}')
+            raise
 
 if __name__ == '__main__':
     init_db()
