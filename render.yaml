@@ -8,8 +8,6 @@ services:
       pip install -r requirements.txt
       mkdir -p instance
       chmod 777 instance
-      python -c "from app import app, init_db; app.app_context().push(); init_db()"
-      chmod 666 instance/leave_management.db
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
       - key: PYTHON_VERSION
