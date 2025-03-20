@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -251,6 +251,44 @@ def approve_wfh(request_id):
 def logout():
     logout_user()
     return redirect(url_for('index'))
+
+@app.route('/calendar')
+@login_required
+def calendar():
+    # Get all approved leave requests
+    leave_events = LeaveRequest.query.filter_by(status='approved').all()
+    # Get all approved WFH requests
+    wfh_events = WFHRequest.query.filter_by(status='approved').all()
+    
+    # Format events for FullCalendar
+    events = []
+    
+    # Add leave events
+    for leave in leave_events:
+        user = User.query.get(leave.user_id)
+        current_date = leave.start_date
+        while current_date <= leave.end_date:
+            events.append({
+                'title': f"{user.username} - {leave.leave_type.upper()}",
+                'start': current_date.isoformat(),
+                'end': (current_date + timedelta(days=1)).isoformat(),
+                'backgroundColor': '#4CAF50' if leave.leave_type == 'annual' else '#FF9800' if leave.leave_type == 'sick' else '#9C27B0' if leave.leave_type == 'maternity' else '#2196F3',
+                'borderColor': '#388E3C' if leave.leave_type == 'annual' else '#F57C00' if leave.leave_type == 'sick' else '#7B1FA2' if leave.leave_type == 'maternity' else '#1976D2'
+            })
+            current_date += timedelta(days=1)
+    
+    # Add WFH events
+    for wfh in wfh_events:
+        user = User.query.get(wfh.user_id)
+        events.append({
+            'title': f"{user.username} - WFH",
+            'start': wfh.date.isoformat(),
+            'end': (wfh.date + timedelta(days=1)).isoformat(),
+            'backgroundColor': '#607D8B',
+            'borderColor': '#455A64'
+        })
+    
+    return render_template('calendar.html', events=events)
 
 def init_db():
     with app.app_context():

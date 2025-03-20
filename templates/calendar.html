@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block head %}
+<!-- FullCalendar CSS -->
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2>Team Calendar</h2>
+            <div class="btn-group">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar Legend -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Legend</h5>
+                    <div class="d-flex flex-wrap gap-3">
+                        <div class="d-flex align-items-center">
+                            <div class="legend-box" style="background-color: #4CAF50; width: 20px; height: 20px; margin-right: 8px;"></div>
+                            <span>Annual Leave</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="legend-box" style="background-color: #FF9800; width: 20px; height: 20px; margin-right: 8px;"></div>
+                            <span>Sick Leave</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="legend-box" style="background-color: #9C27B0; width: 20px; height: 20px; margin-right: 8px;"></div>
+                            <span>Maternity Leave</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="legend-box" style="background-color: #2196F3; width: 20px; height: 20px; margin-right: 8px;"></div>
+                            <span>Paternity Leave</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="legend-box" style="background-color: #607D8B; width: 20px; height: 20px; margin-right: 8px;"></div>
+                            <span>Work From Home</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <div id="calendar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- FullCalendar JS -->
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        events: {{ events|tojson|safe }},
+        eventDidMount: function(info) {
+            // Add tooltip
+            info.el.title = info.event.title;
+        },
+        height: 'auto',
+        eventTimeFormat: {
+            hour: '2-digit',
+            minute: '2-digit',
+            meridiem: false
+        },
+        displayEventTime: false,
+        firstDay: 1, // Start week on Monday
+        weekNumbers: true,
+        weekText: 'W',
+        allDaySlot: true,
+        nowIndicator: true,
+        businessHours: {
+            daysOfWeek: [1, 2, 3, 4, 5], // Monday - Friday
+            startTime: '09:00',
+            endTime: '17:00',
+        },
+        slotMinTime: '08:00:00',
+        slotMaxTime: '18:00:00',
+        expandRows: true,
+        stickyHeaderDates: true,
+        dayMaxEvents: true,
+        eventClick: function(info) {
+            // Show event details in a modal
+            alert(info.event.title);
+        }
+    });
+    calendar.render();
+});
+</script>
+{% endblock %} 
