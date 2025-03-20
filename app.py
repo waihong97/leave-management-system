@@ -360,8 +360,9 @@ def init_db():
             print(f'Error initializing database: {e}')
             raise
 
-# Initialize database when the application starts
-init_db()
+# Initialize database and create admin user
+with app.app_context():
+    init_db()
 
 if __name__ == '__main__':
     app.run(debug=True) 
