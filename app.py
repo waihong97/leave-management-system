@@ -307,6 +307,11 @@ def init_db():
                 db.session.add(admin)
                 db.session.commit()
                 print('Admin user created successfully')
+            else:
+                # Update admin password if user exists
+                admin.password_hash = generate_password_hash('admin123')
+                db.session.commit()
+                print('Admin user password updated')
             
             # Create default leave rules if they don't exist
             default_rules = [
