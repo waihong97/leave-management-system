@@ -1,33 +1,100 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="text-center">Apply for Leave</h3>
-            </div>
-            <div class="card-body">
-                <form method="POST">
-                    <div class="mb-3">
-                        <label for="start_date" class="form-label">Start Date</label>
-                        <input type="date" class="form-control" id="start_date" name="start_date" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="end_date" class="form-label">End Date</label>
-                        <input type="date" class="form-control" id="end_date" name="end_date" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="reason" class="form-label">Reason for Leave</label>
-                        <textarea class="form-control" id="reason" name="reason" rows="4" required></textarea>
-                    </div>
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary">Submit Request</button>
-                        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancel</a>
-                    </div>
-                </form>
-            </div>
+<div class="container mt-5">
+    <h2>Apply for Leave</h2>
+    <form method="POST" class="mt-4">
+        <div class="mb-3">
+            <label for="leave_type" class="form-label">Leave Type</label>
+            <select class="form-select" id="leave_type" name="leave_type" required>
+                <option value="">Select Leave Type</option>
+                {% for rule in leave_rules %}
+                <option value="{{ rule.leave_type }}">{{ rule.leave_type|title }} (Max: {{ rule.max_days }} days)</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="start_date" class="form-label">Start Date</label>
+            <input type="date" class="form-control" id="start_date" name="start_date" required>
+        </div>
+        <div class="mb-3">
+            <label for="end_date" class="form-label">End Date</label>
+            <input type="date" class="form-control" id="end_date" name="end_date" required>
+        </div>
+        <div class="mb-3">
+            <label for="reason" class="form-label">Reason</label>
+            <textarea class="form-control" id="reason" name="reason" rows="3" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Submit Request</button>
+    </form>
+
+    <!-- Leave Rules Information -->
+    <div class="mt-5">
+        <h3>Leave Rules</h3>
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Leave Type</th>
+                        <th>Max Days</th>
+                        <th>Min Notice</th>
+                        <th>Max Consecutive</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rule in leave_rules %}
+                    <tr>
+                        <td>{{ rule.leave_type|title }}</td>
+                        <td>{{ rule.max_days }}</td>
+                        <td>{{ rule.min_days_notice }} days</td>
+                        <td>{{ rule.max_consecutive_days }} days</td>
+                        <td>{{ rule.description }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const startDate = document.getElementById('start_date');
+    const endDate = document.getElementById('end_date');
+    const leaveType = document.getElementById('leave_type');
+
+    // Set minimum date for start_date to today
+    const today = new Date().toISOString().split('T')[0];
+    startDate.min = today;
+
+    // Update end_date minimum when start_date changes
+    startDate.addEventListener('change', function() {
+        endDate.min = this.value;
+        if (endDate.value && endDate.value < this.value) {
+            endDate.value = this.value;
+        }
+    });
+
+    // Validate leave duration against rules
+    function validateLeaveDuration() {
+        const selectedRule = Array.from(leaveType.options).find(option => option.value === leaveType.value);
+        if (!selectedRule) return;
+
+        const maxDays = parseInt(selectedRule.text.match(/Max: (\d+)/)[1]);
+        const start = new Date(startDate.value);
+        const end = new Date(endDate.value);
+        const days = (end - start) / (1000 * 60 * 60 * 24) + 1;
+
+        if (days > maxDays) {
+            alert(`Maximum leave duration for ${selectedRule.text} is ${maxDays} days`);
+            endDate.value = new Date(start.getTime() + (maxDays - 1) * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        }
+    }
+
+    startDate.addEventListener('change', validateLeaveDuration);
+    endDate.addEventListener('change', validateLeaveDuration);
+    leaveType.addEventListener('change', validateLeaveDuration);
+});
+</script>
 {% endblock %} 

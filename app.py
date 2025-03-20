@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev')
@@ -35,6 +35,8 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(120), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
     leave_requests = db.relationship('LeaveRequest', backref='user', lazy=True)
+    wfh_requests = db.relationship('WFHRequest', backref='user', lazy=True)
+    leave_balance = db.relationship('LeaveBalance', backref='user', lazy=True)
 
 class LeaveRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -44,6 +46,31 @@ class LeaveRequest(db.Model):
     reason = db.Column(db.Text, nullable=False)
     status = db.Column(db.String(20), default='pending')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    leave_type = db.Column(db.String(20), nullable=False)  # annual, sick, maternity, paternity, etc.
+
+class WFHRequest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    reason = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), default='pending')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class LeaveBalance(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    leave_type = db.Column(db.String(20), nullable=False)
+    balance = db.Column(db.Float, nullable=False)  # in days
+    year = db.Column(db.Integer, nullable=False)
+
+class LeaveRule(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    leave_type = db.Column(db.String(20), unique=True, nullable=False)
+    max_days = db.Column(db.Float, nullable=False)
+    min_days_notice = db.Column(db.Integer, nullable=False)  # minimum days notice required
+    max_consecutive_days = db.Column(db.Integer, nullable=False)
+    requires_approval = db.Column(db.Boolean, default=True)
+    description = db.Column(db.Text)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -72,9 +99,22 @@ def login():
 def dashboard():
     if current_user.is_admin:
         leave_requests = LeaveRequest.query.all()
+        wfh_requests = WFHRequest.query.all()
     else:
         leave_requests = LeaveRequest.query.filter_by(user_id=current_user.id).all()
-    return render_template('dashboard.html', leave_requests=leave_requests)
+        wfh_requests = WFHRequest.query.filter_by(user_id=current_user.id).all()
+    
+    # Get leave balance for current year
+    current_year = datetime.now().year
+    leave_balance = LeaveBalance.query.filter_by(
+        user_id=current_user.id,
+        year=current_year
+    ).all()
+    
+    return render_template('dashboard.html', 
+                         leave_requests=leave_requests,
+                         wfh_requests=wfh_requests,
+                         leave_balance=leave_balance)
 
 @app.route('/apply_leave', methods=['GET', 'POST'])
 @login_required
@@ -83,18 +123,128 @@ def apply_leave():
         start_date = datetime.strptime(request.form.get('start_date'), '%Y-%m-%d').date()
         end_date = datetime.strptime(request.form.get('end_date'), '%Y-%m-%d').date()
         reason = request.form.get('reason')
+        leave_type = request.form.get('leave_type')
+        
+        # Check leave balance
+        leave_balance = LeaveBalance.query.filter_by(
+            user_id=current_user.id,
+            leave_type=leave_type,
+            year=start_date.year
+        ).first()
+        
+        if not leave_balance or leave_balance.balance <= 0:
+            flash('Insufficient leave balance')
+            return redirect(url_for('apply_leave'))
+        
+        # Check leave rules
+        leave_rule = LeaveRule.query.filter_by(leave_type=leave_type).first()
+        if leave_rule:
+            days_notice = (start_date - datetime.now().date()).days
+            if days_notice < leave_rule.min_days_notice:
+                flash(f'Please apply at least {leave_rule.min_days_notice} days in advance')
+                return redirect(url_for('apply_leave'))
+            
+            consecutive_days = (end_date - start_date).days + 1
+            if consecutive_days > leave_rule.max_consecutive_days:
+                flash(f'Maximum consecutive days allowed is {leave_rule.max_consecutive_days}')
+                return redirect(url_for('apply_leave'))
         
         leave_request = LeaveRequest(
             user_id=current_user.id,
             start_date=start_date,
             end_date=end_date,
-            reason=reason
+            reason=reason,
+            leave_type=leave_type
         )
         db.session.add(leave_request)
         db.session.commit()
         flash('Leave request submitted successfully')
         return redirect(url_for('dashboard'))
-    return render_template('apply_leave.html')
+    
+    # Get leave types for the form
+    leave_rules = LeaveRule.query.all()
+    return render_template('apply_leave.html', leave_rules=leave_rules)
+
+@app.route('/apply_wfh', methods=['GET', 'POST'])
+@login_required
+def apply_wfh():
+    if request.method == 'POST':
+        date = datetime.strptime(request.form.get('date'), '%Y-%m-%d').date()
+        reason = request.form.get('reason')
+        
+        # Check if WFH request already exists for the date
+        existing_request = WFHRequest.query.filter_by(
+            user_id=current_user.id,
+            date=date
+        ).first()
+        
+        if existing_request:
+            flash('You have already submitted a WFH request for this date')
+            return redirect(url_for('apply_wfh'))
+        
+        wfh_request = WFHRequest(
+            user_id=current_user.id,
+            date=date,
+            reason=reason
+        )
+        db.session.add(wfh_request)
+        db.session.commit()
+        flash('WFH request submitted successfully')
+        return redirect(url_for('dashboard'))
+    
+    return render_template('apply_wfh.html')
+
+@app.route('/approve_leave/<int:request_id>', methods=['POST'])
+@login_required
+def approve_leave(request_id):
+    if not current_user.is_admin:
+        flash('Unauthorized')
+        return redirect(url_for('dashboard'))
+    
+    leave_request = LeaveRequest.query.get_or_404(request_id)
+    action = request.form.get('action')
+    
+    if action == 'approve':
+        leave_request.status = 'approved'
+        # Update leave balance
+        leave_balance = LeaveBalance.query.filter_by(
+            user_id=leave_request.user_id,
+            leave_type=leave_request.leave_type,
+            year=leave_request.start_date.year
+        ).first()
+        
+        if leave_balance:
+            days = (leave_request.end_date - leave_request.start_date).days + 1
+            leave_balance.balance -= days
+            db.session.commit()
+            flash('Leave request approved')
+    elif action == 'reject':
+        leave_request.status = 'rejected'
+        db.session.commit()
+        flash('Leave request rejected')
+    
+    return redirect(url_for('dashboard'))
+
+@app.route('/approve_wfh/<int:request_id>', methods=['POST'])
+@login_required
+def approve_wfh(request_id):
+    if not current_user.is_admin:
+        flash('Unauthorized')
+        return redirect(url_for('dashboard'))
+    
+    wfh_request = WFHRequest.query.get_or_404(request_id)
+    action = request.form.get('action')
+    
+    if action == 'approve':
+        wfh_request.status = 'approved'
+        db.session.commit()
+        flash('WFH request approved')
+    elif action == 'reject':
+        wfh_request.status = 'rejected'
+        db.session.commit()
+        flash('WFH request rejected')
+    
+    return redirect(url_for('dashboard'))
 
 @app.route('/logout')
 @login_required
@@ -119,6 +269,49 @@ def init_db():
                 db.session.add(admin)
                 db.session.commit()
                 print('Admin user created successfully')
+            
+            # Create default leave rules if they don't exist
+            default_rules = [
+                LeaveRule(
+                    leave_type='annual',
+                    max_days=14,
+                    min_days_notice=7,
+                    max_consecutive_days=14,
+                    requires_approval=True,
+                    description='Annual leave for rest and recreation'
+                ),
+                LeaveRule(
+                    leave_type='sick',
+                    max_days=30,
+                    min_days_notice=1,
+                    max_consecutive_days=30,
+                    requires_approval=True,
+                    description='Sick leave for medical reasons'
+                ),
+                LeaveRule(
+                    leave_type='maternity',
+                    max_days=90,
+                    min_days_notice=30,
+                    max_consecutive_days=90,
+                    requires_approval=True,
+                    description='Maternity leave for expecting mothers'
+                ),
+                LeaveRule(
+                    leave_type='paternity',
+                    max_days=7,
+                    min_days_notice=7,
+                    max_consecutive_days=7,
+                    requires_approval=True,
+                    description='Paternity leave for new fathers'
+                )
+            ]
+            
+            for rule in default_rules:
+                if not LeaveRule.query.filter_by(leave_type=rule.leave_type).first():
+                    db.session.add(rule)
+            
+            db.session.commit()
+            print('Default leave rules created successfully')
             
             # Set proper permissions on the database file
             if os.path.exists(db_path):
