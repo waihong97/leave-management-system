@@ -6,8 +6,9 @@ services:
     plan: free
     buildCommand: |
       pip install -r requirements.txt
-      python -c "from app import app, db; app.app_context().push(); db.create_all()"
-      python create_admin.py
+      mkdir -p instance
+      chmod 777 instance
+      python -c "from app import app, init_db; app.app_context().push(); init_db()"
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
       - key: PYTHON_VERSION
@@ -19,4 +20,4 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: SQLALCHEMY_DATABASE_URI
-        value: sqlite:///leave_management.db 
+        value: sqlite:///instance/leave_management.db 
