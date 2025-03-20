@@ -313,6 +313,65 @@ def init_db():
                 db.session.commit()
                 print('Admin user password updated')
             
+            # Create regular users if they don't exist
+            regular_users = [
+                {
+                    'username': 'john_doe',
+                    'password': 'password123',
+                    'is_admin': False
+                },
+                {
+                    'username': 'jane_smith',
+                    'password': 'password123',
+                    'is_admin': False
+                },
+                {
+                    'username': 'mike_wilson',
+                    'password': 'password123',
+                    'is_admin': False
+                }
+            ]
+            
+            current_year = datetime.now().year
+            
+            for user_data in regular_users:
+                user = User.query.filter_by(username=user_data['username']).first()
+                if not user:
+                    user = User(
+                        username=user_data['username'],
+                        password_hash=generate_password_hash(user_data['password']),
+                        is_admin=user_data['is_admin']
+                    )
+                    db.session.add(user)
+                    db.session.commit()
+                    print(f"User {user_data['username']} created successfully")
+                    
+                    # Create leave balances for the user
+                    leave_types = ['annual', 'sick', 'maternity', 'paternity']
+                    max_days = {
+                        'annual': 14,
+                        'sick': 30,
+                        'maternity': 90,
+                        'paternity': 7
+                    }
+                    
+                    for leave_type in leave_types:
+                        leave_balance = LeaveBalance(
+                            user_id=user.id,
+                            leave_type=leave_type,
+                            balance=max_days[leave_type],
+                            year=current_year
+                        )
+                        db.session.add(leave_balance)
+                    
+                    db.session.commit()
+                    print(f"Leave balances created for {user_data['username']}")
+                else:
+                    # Update password if user exists
+                    user.password_hash = generate_password_hash(user_data['password'])
+                    db.session.commit()
+                    print(f"Password updated for {user_data['username']}")
+            
             # Create default leave rules if they don't exist
             default_rules = [
                 LeaveRule(
