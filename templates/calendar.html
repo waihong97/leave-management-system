@@ -3,15 +3,89 @@
 {% block head %}
 <!-- FullCalendar CSS -->
 <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+<style>
+    .fc {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .fc-toolbar-title {
+        font-size: 1.5em !important;
+        font-weight: 600 !important;
+    }
+    .fc-button {
+        background-color: #4CAF50 !important;
+        border-color: #4CAF50 !important;
+    }
+    .fc-button:hover {
+        background-color: #45a049 !important;
+        border-color: #45a049 !important;
+    }
+    .fc-button-active {
+        background-color: #357abd !important;
+        border-color: #357abd !important;
+    }
+    .fc-event {
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    .fc-event:hover {
+        transform: scale(1.02);
+    }
+    .legend-box {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        margin-right: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .legend-item {
+        padding: 8px 16px;
+        border-radius: 4px;
+        background: #f8f9fa;
+        margin: 4px;
+        display: inline-flex;
+        align-items: center;
+    }
+    .calendar-container {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 12px;
+        margin-top: 20px;
+    }
+    .fc-day-today {
+        background-color: #e8f5e9 !important;
+    }
+    .fc-event-time {
+        display: none;
+    }
+    .fc-event-title {
+        font-weight: 500;
+    }
+    .fc-daygrid-day.fc-day-today {
+        background-color: #e8f5e9 !important;
+    }
+    .fc-timegrid-slot.fc-timegrid-slot-labels {
+        background-color: #f8f9fa;
+    }
+    .fc-timegrid-slot {
+        height: 3em !important;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <h2>Team Calendar</h2>
-            <div class="btn-group">
-                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-12 mb-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">Team Calendar</h2>
+                <div class="btn-group">
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -19,28 +93,28 @@
     <!-- Calendar Legend -->
     <div class="row mb-4">
         <div class="col-md-12">
-            <div class="card">
+            <div class="card shadow-sm">
                 <div class="card-body">
-                    <h5 class="card-title">Legend</h5>
-                    <div class="d-flex flex-wrap gap-3">
-                        <div class="d-flex align-items-center">
-                            <div class="legend-box" style="background-color: #4CAF50; width: 20px; height: 20px; margin-right: 8px;"></div>
+                    <h5 class="card-title mb-3">Leave Types</h5>
+                    <div class="d-flex flex-wrap gap-2">
+                        <div class="legend-item">
+                            <div class="legend-box" style="background-color: #4CAF50;"></div>
                             <span>Annual Leave</span>
                         </div>
-                        <div class="d-flex align-items-center">
-                            <div class="legend-box" style="background-color: #FF9800; width: 20px; height: 20px; margin-right: 8px;"></div>
+                        <div class="legend-item">
+                            <div class="legend-box" style="background-color: #FF9800;"></div>
                             <span>Sick Leave</span>
                         </div>
-                        <div class="d-flex align-items-center">
-                            <div class="legend-box" style="background-color: #9C27B0; width: 20px; height: 20px; margin-right: 8px;"></div>
+                        <div class="legend-item">
+                            <div class="legend-box" style="background-color: #9C27B0;"></div>
                             <span>Maternity Leave</span>
                         </div>
-                        <div class="d-flex align-items-center">
-                            <div class="legend-box" style="background-color: #2196F3; width: 20px; height: 20px; margin-right: 8px;"></div>
+                        <div class="legend-item">
+                            <div class="legend-box" style="background-color: #2196F3;"></div>
                             <span>Paternity Leave</span>
                         </div>
-                        <div class="d-flex align-items-center">
-                            <div class="legend-box" style="background-color: #607D8B; width: 20px; height: 20px; margin-right: 8px;"></div>
+                        <div class="legend-item">
+                            <div class="legend-box" style="background-color: #607D8B;"></div>
                             <span>Work From Home</span>
                         </div>
                     </div>
@@ -52,10 +126,23 @@
     <!-- Calendar -->
     <div class="row">
         <div class="col-md-12">
-            <div class="card">
-                <div class="card-body">
-                    <div id="calendar"></div>
-                </div>
+            <div class="calendar-container">
+                <div id="calendar"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Event Details Modal -->
+<div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="eventModalLabel">Event Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="eventDetails"></div>
             </div>
         </div>
     </div>
@@ -103,8 +190,32 @@ document.addEventListener('DOMContentLoaded', function() {
         stickyHeaderDates: true,
         dayMaxEvents: true,
         eventClick: function(info) {
-            // Show event details in a modal
-            alert(info.event.title);
+            // Show event details in modal
+            const modal = new bootstrap.Modal(document.getElementById('eventModal'));
+            const eventDetails = document.getElementById('eventDetails');
+            eventDetails.innerHTML = `
+                <div class="mb-3">
+                    <strong>Title:</strong> ${info.event.title}
+                </div>
+                <div class="mb-3">
+                    <strong>Start:</strong> ${info.event.start.toLocaleDateString()}
+                </div>
+                <div class="mb-3">
+                    <strong>End:</strong> ${info.event.end.toLocaleDateString()}
+                </div>
+                <div class="mb-3">
+                    <strong>Type:</strong> ${info.event.title.split(' - ')[1]}
+                </div>
+            `;
+            modal.show();
+        },
+        viewDidMount: function(arg) {
+            // Add custom classes to today's date
+            const today = calendar.getDate();
+            const todayCell = document.querySelector(`.fc-day[data-date="${today.toISOString().split('T')[0]}"]`);
+            if (todayCell) {
+                todayCell.classList.add('fc-day-today');
+            }
         }
     });
     calendar.render();
