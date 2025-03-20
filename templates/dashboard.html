@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2>Dashboard</h2>
+            <a href="{{ url_for('apply_leave') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Apply Leave
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h4>Leave Requests</h4>
+            </div>
+            <div class="card-body">
+                {% if leave_requests %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th>Reason</th>
+                                    <th>Status</th>
+                                    <th>Created At</th>
+                                    {% if current_user.is_admin %}
+                                        <th>Actions</th>
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for request in leave_requests %}
+                                    <tr>
+                                        <td>{{ request.start_date.strftime('%Y-%m-%d') }}</td>
+                                        <td>{{ request.end_date.strftime('%Y-%m-%d') }}</td>
+                                        <td>{{ request.reason }}</td>
+                                        <td>
+                                            <span class="badge bg-{{ 'success' if request.status == 'approved' else 'warning' if request.status == 'pending' else 'danger' }}">
+                                                {{ request.status }}
+                                            </span>
+                                        </td>
+                                        <td>{{ request.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        {% if current_user.is_admin and request.status == 'pending' %}
+                                            <td>
+                                                <button class="btn btn-sm btn-success">Approve</button>
+                                                <button class="btn btn-sm btn-danger">Reject</button>
+                                            </td>
+                                        {% endif %}
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-center">No leave requests found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
