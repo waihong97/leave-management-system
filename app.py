@@ -43,7 +43,7 @@ class LeaveRequest(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)
-    reason = db.Column(db.Text, nullable=False)
+    reason = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(20), default='pending')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     leave_type = db.Column(db.String(20), nullable=False)  # annual, sick, maternity, paternity, etc.
@@ -52,7 +52,7 @@ class WFHRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     date = db.Column(db.Date, nullable=False)
-    reason = db.Column(db.Text, nullable=False)
+    reason = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(20), default='pending')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -122,8 +122,16 @@ def apply_leave():
     if request.method == 'POST':
         start_date = datetime.strptime(request.form.get('start_date'), '%Y-%m-%d').date()
         end_date = datetime.strptime(request.form.get('end_date'), '%Y-%m-%d').date()
-        reason = request.form.get('reason')
+        reason = request.form.get('reason', '')  # Optional reason
         leave_type = request.form.get('leave_type')
+        
+        # Check if start or end date is on weekend
+        if is_weekend(start_date) or is_weekend(end_date):
+            flash('Leave cannot start or end on weekends')
+            return redirect(url_for('apply_leave'))
+        
+        # Calculate weekdays only
+        weekdays = count_weekdays(start_date, end_date)
         
         # Check leave balance
         leave_balance = LeaveBalance.query.filter_by(
@@ -132,28 +140,27 @@ def apply_leave():
             year=start_date.year
         ).first()
         
-        if not leave_balance or leave_balance.balance <= 0:
+        if not leave_balance or leave_balance.balance < weekdays:
             flash('Insufficient leave balance')
             return redirect(url_for('apply_leave'))
         
         # Check leave rules
         leave_rule = LeaveRule.query.filter_by(leave_type=leave_type).first()
         if leave_rule:
-            days_notice = (start_date - datetime.now().date()).days
+            days_notice = count_weekdays(datetime.now().date(), start_date)
             if days_notice < leave_rule.min_days_notice:
-                flash(f'Please apply at least {leave_rule.min_days_notice} days in advance')
+                flash(f'Please apply at least {leave_rule.min_days_notice} working days in advance')
                 return redirect(url_for('apply_leave'))
             
-            consecutive_days = (end_date - start_date).days + 1
-            if consecutive_days > leave_rule.max_consecutive_days:
-                flash(f'Maximum consecutive days allowed is {leave_rule.max_consecutive_days}')
+            if weekdays > leave_rule.max_consecutive_days:
+                flash(f'Maximum consecutive working days allowed is {leave_rule.max_consecutive_days}')
                 return redirect(url_for('apply_leave'))
         
         leave_request = LeaveRequest(
             user_id=current_user.id,
             start_date=start_date,
             end_date=end_date,
-            reason=reason,
+            reason=reason if reason else None,
             leave_type=leave_type
         )
         db.session.add(leave_request)
@@ -170,7 +177,12 @@ def apply_leave():
 def apply_wfh():
     if request.method == 'POST':
         date = datetime.strptime(request.form.get('date'), '%Y-%m-%d').date()
-        reason = request.form.get('reason')
+        reason = request.form.get('reason', '')  # Optional reason
+        
+        # Check if date is weekend
+        if is_weekend(date):
+            flash('Cannot apply WFH for weekends')
+            return redirect(url_for('apply_wfh'))
         
         # Check if WFH request already exists for the date
         existing_request = WFHRequest.query.filter_by(
@@ -185,7 +197,7 @@ def apply_wfh():
         wfh_request = WFHRequest(
             user_id=current_user.id,
             date=date,
-            reason=reason
+            reason=reason if reason else None
         )
         db.session.add(wfh_request)
         db.session.commit()
@@ -268,16 +280,18 @@ def calendar():
         user = User.query.get(leave.user_id)
         current_date = leave.start_date
         while current_date <= leave.end_date:
-            events.append({
-                'title': f"{user.username} - {leave.leave_type.upper()}",
-                'start': current_date.isoformat(),
-                'end': (current_date + timedelta(days=1)).isoformat(),
-                'backgroundColor': '#4CAF50' if leave.leave_type == 'annual' else '#FF9800' if leave.leave_type == 'sick' else '#9C27B0' if leave.leave_type == 'maternity' else '#2196F3',
-                'borderColor': '#388E3C' if leave.leave_type == 'annual' else '#F57C00' if leave.leave_type == 'sick' else '#7B1FA2' if leave.leave_type == 'maternity' else '#1976D2'
-            })
+            # Skip weekends
+            if not is_weekend(current_date):
+                events.append({
+                    'title': f"{user.username} - {leave.leave_type.upper()}",
+                    'start': current_date.isoformat(),
+                    'end': (current_date + timedelta(days=1)).isoformat(),
+                    'backgroundColor': '#4CAF50' if leave.leave_type == 'annual' else '#FF9800' if leave.leave_type == 'sick' else '#9C27B0' if leave.leave_type == 'maternity' else '#2196F3',
+                    'borderColor': '#388E3C' if leave.leave_type == 'annual' else '#F57C00' if leave.leave_type == 'sick' else '#7B1FA2' if leave.leave_type == 'maternity' else '#1976D2'
+                })
             current_date += timedelta(days=1)
     
-    # Add WFH events
+    # Add WFH events (already filtered for weekends in apply_wfh)
     for wfh in wfh_events:
         user = User.query.get(wfh.user_id)
         events.append({
@@ -289,6 +303,20 @@ def calendar():
         })
     
     return render_template('calendar.html', events=events)
+
+def is_weekend(date):
+    """Check if a date is a weekend (Saturday=5 or Sunday=6)"""
+    return date.weekday() >= 5
+
+def count_weekdays(start_date, end_date):
+    """Count the number of weekdays between two dates"""
+    days = 0
+    current_date = start_date
+    while current_date <= end_date:
+        if not is_weekend(current_date):
+            days += 1
+        current_date += timedelta(days=1)
+    return days
 
 def init_db():
     with app.app_context():
