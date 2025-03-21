@@ -1,126 +1,139 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="row">
-        <div class="col-md-12 mb-4">
-            <h2>Welcome, {{ current_user.username }}</h2>
-            <div class="btn-group">
-                <a href="{{ url_for('apply_leave') }}" class="btn btn-primary">Apply Leave</a>
-                <a href="{{ url_for('apply_wfh') }}" class="btn btn-success">Apply WFH</a>
-                <a href="{{ url_for('calendar') }}" class="btn btn-info">Team Calendar</a>
-                <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Leave Balance Section -->
+<div class="container">
+    <!-- Welcome Message -->
     <div class="row mb-4">
-        <div class="col-md-12">
-            <h3>Leave Balance</h3>
-            <div class="table-responsive">
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Leave Type</th>
-                            <th>Balance (Days)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for balance in leave_balance %}
-                        <tr>
-                            <td>{{ balance.leave_type|title }}</td>
-                            <td>{{ balance.balance }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <div class="col-12">
+            <div class="welcome-card">
+                <h2>Welcome, {{ current_user.username }}</h2>
+                <p class="text-muted">Here's your leave overview</p>
             </div>
         </div>
     </div>
 
-    <!-- Leave Requests Section -->
+    <!-- Leave Balance Cards -->
     <div class="row mb-4">
-        <div class="col-md-12">
-            <h3>Leave Requests</h3>
-            <div class="table-responsive">
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Type</th>
-                            <th>Start Date</th>
-                            <th>End Date</th>
-                            <th>Reason</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for request in leave_requests %}
-                        <tr>
-                            <td>{{ request.leave_type|title }}</td>
-                            <td>{{ request.start_date.strftime('%Y-%m-%d') }}</td>
-                            <td>{{ request.end_date.strftime('%Y-%m-%d') }}</td>
-                            <td>{{ request.reason }}</td>
-                            <td>
-                                <span class="badge {% if request.status == 'approved' %}bg-success{% elif request.status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %}">
-                                    {{ request.status|title }}
-                                </span>
-                            </td>
-                            <td>
-                                {% if current_user.is_admin and request.status == 'pending' %}
-                                <form method="POST" action="{{ url_for('approve_leave', request_id=request.id) }}" class="d-inline">
-                                    <button type="submit" name="action" value="approve" class="btn btn-success btn-sm">Approve</button>
-                                    <button type="submit" name="action" value="reject" class="btn btn-danger btn-sm">Reject</button>
-                                </form>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        {% for balance in leave_balance %}
+        <div class="col-md-3 mb-3">
+            <div class="dashboard-card">
+                <h4 class="text-capitalize">{{ balance.leave_type }}</h4>
+                <div class="dashboard-stat">{{ balance.balance }}</div>
+                <small class="text-muted">days remaining</small>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Recent Leave Requests -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h3 class="card-title mb-0">Recent Leave Requests</h3>
+                    <a href="{{ url_for('leave_history') }}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-history me-1"></i> View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for leave in leave_requests[:5] %}
+                                <tr>
+                                    <td class="text-capitalize">{{ leave.leave_type }}</td>
+                                    <td>{{ leave.start_date.strftime('%Y-%m-%d') }}</td>
+                                    <td>{{ leave.end_date.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        <span class="badge status-{{ leave.status }}">
+                                            {{ leave.status.title() }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- WFH Requests Section -->
-    <div class="row">
-        <div class="col-md-12">
-            <h3>Work From Home Requests</h3>
-            <div class="table-responsive">
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Reason</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for request in wfh_requests %}
-                        <tr>
-                            <td>{{ request.date.strftime('%Y-%m-%d') }}</td>
-                            <td>{{ request.reason }}</td>
-                            <td>
-                                <span class="badge {% if request.status == 'approved' %}bg-success{% elif request.status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %}">
-                                    {{ request.status|title }}
-                                </span>
-                            </td>
-                            <td>
-                                {% if current_user.is_admin and request.status == 'pending' %}
-                                <form method="POST" action="{{ url_for('approve_wfh', request_id=request.id) }}" class="d-inline">
-                                    <button type="submit" name="action" value="approve" class="btn btn-success btn-sm">Approve</button>
-                                    <button type="submit" name="action" value="reject" class="btn btn-danger btn-sm">Reject</button>
-                                </form>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    <!-- Recent WFH Requests -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h3 class="card-title mb-0">Recent WFH Requests</h3>
+                    <a href="{{ url_for('leave_history') }}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-history me-1"></i> View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for wfh in wfh_requests[:5] %}
+                                <tr>
+                                    <td>{{ wfh.date.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        <span class="badge status-{{ wfh.status }}">
+                                            {{ wfh.status.title() }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    .welcome-card {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+    }
+
+    .welcome-card h2 {
+        margin: 0;
+        font-weight: 600;
+    }
+
+    .welcome-card p {
+        margin: 0.5rem 0 0;
+        opacity: 0.9;
+    }
+
+    .btn-outline-primary {
+        color: var(--secondary-color);
+        border-color: var(--secondary-color);
+    }
+
+    .btn-outline-primary:hover {
+        background-color: var(--secondary-color);
+        border-color: var(--secondary-color);
+        color: white;
+    }
+</style>
 {% endblock %} 
