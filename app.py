@@ -67,7 +67,6 @@ class LeaveRule(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     leave_type = db.Column(db.String(20), unique=True, nullable=False)
     max_days = db.Column(db.Float, nullable=False)
-    min_days_notice = db.Column(db.Integer, nullable=False)  # minimum days notice required
     max_consecutive_days = db.Column(db.Integer, nullable=False)
     requires_approval = db.Column(db.Boolean, default=True)
     description = db.Column(db.Text)
@@ -146,15 +145,9 @@ def apply_leave():
         
         # Check leave rules
         leave_rule = LeaveRule.query.filter_by(leave_type=leave_type).first()
-        if leave_rule:
-            days_notice = count_weekdays(datetime.now().date(), start_date)
-            if days_notice < leave_rule.min_days_notice:
-                flash(f'Please apply at least {leave_rule.min_days_notice} working days in advance')
-                return redirect(url_for('apply_leave'))
-            
-            if weekdays > leave_rule.max_consecutive_days:
-                flash(f'Maximum consecutive working days allowed is {leave_rule.max_consecutive_days}')
-                return redirect(url_for('apply_leave'))
+        if leave_rule and weekdays > leave_rule.max_consecutive_days:
+            flash(f'Maximum consecutive working days allowed is {leave_rule.max_consecutive_days}')
+            return redirect(url_for('apply_leave'))
         
         leave_request = LeaveRequest(
             user_id=current_user.id,
@@ -405,7 +398,6 @@ def init_db():
                 LeaveRule(
                     leave_type='annual',
                     max_days=14,
-                    min_days_notice=7,
                     max_consecutive_days=14,
                     requires_approval=True,
                     description='Annual leave for rest and recreation'
@@ -413,7 +405,6 @@ def init_db():
                 LeaveRule(
                     leave_type='sick',
                     max_days=30,
-                    min_days_notice=1,
                     max_consecutive_days=30,
                     requires_approval=True,
                     description='Sick leave for medical reasons'
@@ -421,7 +412,6 @@ def init_db():
                 LeaveRule(
                     leave_type='maternity',
                     max_days=90,
-                    min_days_notice=30,
                     max_consecutive_days=90,
                     requires_approval=True,
                     description='Maternity leave for expecting mothers'
@@ -429,7 +419,6 @@ def init_db():
                 LeaveRule(
                     leave_type='paternity',
                     max_days=7,
-                    min_days_notice=7,
                     max_consecutive_days=7,
                     requires_approval=True,
                     description='Paternity leave for new fathers'

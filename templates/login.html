@@ -2,27 +2,69 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="text-center">Login</h3>
-            </div>
-            <div class="card-body">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow-lg">
+            <div class="card-body p-5">
+                <div class="text-center mb-4">
+                    <i class="fas fa-user-circle fa-3x text-primary mb-3"></i>
+                    <h2 class="card-title mb-4">Welcome Back</h2>
+                </div>
                 <form method="POST">
-                    <div class="mb-3">
-                        <label for="username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="username" name="username" required>
+                    <div class="mb-4">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-user"></i>
+                            </span>
+                            <input type="text" class="form-control" name="username" placeholder="Username" required>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
+                    <div class="mb-4">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-lock"></i>
+                            </span>
+                            <input type="password" class="form-control" name="password" placeholder="Password" required>
+                        </div>
                     </div>
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">Login</button>
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-sign-in-alt me-2"></i>Login
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    .card {
+        border: none;
+        border-radius: 15px;
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+    }
+    
+    .input-group-text {
+        background-color: transparent;
+        border-right: none;
+    }
+    
+    .form-control {
+        border-left: none;
+    }
+    
+    .form-control:focus {
+        border-color: #ced4da;
+    }
+    
+    .input-group:focus-within {
+        box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+    }
+    
+    .btn-lg {
+        padding: 12px 24px;
+        font-size: 1.1rem;
+    }
+</style>
 {% endblock %} 
