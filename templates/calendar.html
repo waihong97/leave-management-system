@@ -1,223 +1,175 @@
 {% extends "base.html" %}
 
-{% block head %}
+{% block extra_css %}
 <!-- FullCalendar CSS -->
-<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+<link href='https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.10/main.min.css' rel='stylesheet' />
 <style>
-    .fc {
+    .calendar-container {
         background: white;
         padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
     }
-    .fc-toolbar-title {
-        font-size: 1.5em !important;
-        font-weight: 600 !important;
+
+    .fc {
+        max-width: 100%;
+        background: white;
     }
-    .fc-button {
-        background-color: #4CAF50 !important;
-        border-color: #4CAF50 !important;
+
+    .fc .fc-toolbar-title {
+        font-size: 1.5em;
+        color: var(--primary-color);
     }
-    .fc-button:hover {
-        background-color: #45a049 !important;
-        border-color: #45a049 !important;
+
+    .fc .fc-button-primary {
+        background-color: var(--secondary-color);
+        border-color: var(--secondary-color);
+        transition: all 0.3s ease;
     }
-    .fc-button-active {
-        background-color: #357abd !important;
-        border-color: #357abd !important;
+
+    .fc .fc-button-primary:hover {
+        background-color: #2980b9;
+        border-color: #2980b9;
+        transform: translateY(-2px);
     }
+
     .fc-event {
+        border-radius: 4px;
+        padding: 2px 5px;
+        margin: 1px 0;
         cursor: pointer;
         transition: transform 0.2s;
     }
+
     .fc-event:hover {
         transform: scale(1.02);
     }
-    .legend-box {
+
+    .legend {
+        background: white;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .legend-color {
         width: 20px;
         height: 20px;
         border-radius: 4px;
-        margin-right: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-right: 10px;
     }
-    .legend-item {
-        padding: 8px 16px;
-        border-radius: 4px;
-        background: #f8f9fa;
-        margin: 4px;
-        display: inline-flex;
-        align-items: center;
-    }
-    .calendar-container {
-        background: #f8f9fa;
-        padding: 20px;
-        border-radius: 12px;
-        margin-top: 20px;
-    }
+
     .fc-day-today {
-        background-color: #e8f5e9 !important;
+        background-color: rgba(52, 152, 219, 0.1) !important;
     }
-    .fc-event-time {
-        display: none;
-    }
-    .fc-event-title {
-        font-weight: 500;
-    }
-    .fc-daygrid-day.fc-day-today {
-        background-color: #e8f5e9 !important;
-    }
-    .fc-timegrid-slot.fc-timegrid-slot-labels {
+
+    .fc-day-sat, .fc-day-sun {
         background-color: #f8f9fa;
     }
-    .fc-timegrid-slot {
-        height: 3em !important;
+
+    .fc th {
+        padding: 10px 0;
+        background-color: var(--primary-color);
+        color: white;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4">
-    <div class="row">
-        <div class="col-md-12 mb-4">
-            <div class="d-flex justify-content-between align-items-center">
-                <h2 class="mb-0">Team Calendar</h2>
-                <div class="btn-group">
-                    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Back to Dashboard
-                    </a>
-                </div>
-            </div>
+<div class="row">
+    <div class="col-md-9">
+        <div class="calendar-container">
+            <div id="calendar"></div>
         </div>
     </div>
-
-    <!-- Calendar Legend -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title mb-3">Leave Types</h5>
-                    <div class="d-flex flex-wrap gap-2">
-                        <div class="legend-item">
-                            <div class="legend-box" style="background-color: #4CAF50;"></div>
-                            <span>Annual Leave</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-box" style="background-color: #FF9800;"></div>
-                            <span>Sick Leave</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-box" style="background-color: #9C27B0;"></div>
-                            <span>Maternity Leave</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-box" style="background-color: #2196F3;"></div>
-                            <span>Paternity Leave</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-box" style="background-color: #607D8B;"></div>
-                            <span>Work From Home</span>
-                        </div>
-                    </div>
-                </div>
+    <div class="col-md-3">
+        <div class="legend">
+            <h4 class="mb-3">Legend</h4>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #4CAF50;"></div>
+                <span>Annual Leave</span>
             </div>
-        </div>
-    </div>
-
-    <!-- Calendar -->
-    <div class="row">
-        <div class="col-md-12">
-            <div class="calendar-container">
-                <div id="calendar"></div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #FF9800;"></div>
+                <span>Sick Leave</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #9C27B0;"></div>
+                <span>Maternity Leave</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #2196F3;"></div>
+                <span>Paternity Leave</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #607D8B;"></div>
+                <span>Work From Home</span>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Event Details Modal -->
-<div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalLabel" aria-hidden="true">
+<div class="modal fade" id="eventModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="eventModalLabel">Event Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title">Event Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div id="eventDetails"></div>
+                <p id="eventDetails"></p>
             </div>
         </div>
     </div>
 </div>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
 <!-- FullCalendar JS -->
-<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.10/main.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.10/main.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/@fullcalendar/interaction@6.1.10/main.min.js'></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var calendarEl = document.getElementById('calendar');
+    var eventModal = new bootstrap.Modal(document.getElementById('eventModal'));
+    
     var calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
-            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            right: 'dayGridMonth,dayGridWeek'
         },
-        events: {{ events|tojson|safe }},
+        events: {{ events | tojson | safe }},
+        eventClick: function(info) {
+            document.getElementById('eventDetails').textContent = info.event.title;
+            eventModal.show();
+        },
         eventDidMount: function(info) {
-            // Add tooltip
             info.el.title = info.event.title;
         },
-        height: 'auto',
-        eventTimeFormat: {
-            hour: '2-digit',
-            minute: '2-digit',
-            meridiem: false
-        },
+        weekends: true,
         displayEventTime: false,
-        firstDay: 1, // Start week on Monday
-        weekNumbers: true,
-        weekText: 'W',
-        allDaySlot: true,
-        nowIndicator: true,
-        businessHours: {
-            daysOfWeek: [1, 2, 3, 4, 5], // Monday - Friday
-            startTime: '09:00',
-            endTime: '17:00',
-        },
-        slotMinTime: '08:00:00',
+        firstDay: 1, // Monday
+        height: 'auto',
+        slotMinTime: '09:00:00',
         slotMaxTime: '18:00:00',
-        expandRows: true,
-        stickyHeaderDates: true,
-        dayMaxEvents: true,
-        eventClick: function(info) {
-            // Show event details in modal
-            const modal = new bootstrap.Modal(document.getElementById('eventModal'));
-            const eventDetails = document.getElementById('eventDetails');
-            eventDetails.innerHTML = `
-                <div class="mb-3">
-                    <strong>Title:</strong> ${info.event.title}
-                </div>
-                <div class="mb-3">
-                    <strong>Start:</strong> ${info.event.start.toLocaleDateString()}
-                </div>
-                <div class="mb-3">
-                    <strong>End:</strong> ${info.event.end.toLocaleDateString()}
-                </div>
-                <div class="mb-3">
-                    <strong>Type:</strong> ${info.event.title.split(' - ')[1]}
-                </div>
-            `;
-            modal.show();
-        },
-        viewDidMount: function(arg) {
-            // Add custom classes to today's date
-            const today = calendar.getDate();
-            const todayCell = document.querySelector(`.fc-day[data-date="${today.toISOString().split('T')[0]}"]`);
-            if (todayCell) {
-                todayCell.classList.add('fc-day-today');
-            }
+        businessHours: {
+            daysOfWeek: [1, 2, 3, 4, 5],
+            startTime: '09:00',
+            endTime: '18:00',
         }
     });
+
     calendar.render();
 });
 </script>
