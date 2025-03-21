@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <!-- Leave Balance Cards -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h3 class="mb-4">Leave Balance</h3>
+        </div>
+        {% for balance in leave_balance %}
+        <div class="col-md-3 mb-3">
+            <div class="dashboard-card">
+                <h4 class="text-capitalize">{{ balance.leave_type }}</h4>
+                <div class="dashboard-stat">{{ balance.balance }}</div>
+                <small class="text-muted">days remaining</small>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Leave History Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h3 class="card-title mb-0">Leave History</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th>Days</th>
+                                    <th>Status</th>
+                                    <th>Applied On</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for leave in leave_requests %}
+                                <tr>
+                                    <td class="text-capitalize">{{ leave.leave_type }}</td>
+                                    <td>{{ leave.start_date.strftime('%Y-%m-%d') }}</td>
+                                    <td>{{ leave.end_date.strftime('%Y-%m-%d') }}</td>
+                                    <td>{{ (leave.end_date - leave.start_date).days + 1 }}</td>
+                                    <td>
+                                        <span class="badge status-{{ leave.status }}">
+                                            {{ leave.status.title() }}
+                                        </span>
+                                    </td>
+                                    <td>{{ leave.created_at.strftime('%Y-%m-%d') }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- WFH History Table -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h3 class="card-title mb-0">Work From Home History</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th>Applied On</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for wfh in wfh_requests %}
+                                <tr>
+                                    <td>{{ wfh.date.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        <span class="badge status-{{ wfh.status }}">
+                                            {{ wfh.status.title() }}
+                                        </span>
+                                    </td>
+                                    <td>{{ wfh.created_at.strftime('%Y-%m-%d') }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .dashboard-card {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+
+    .dashboard-stat {
+        font-size: 2rem;
+        font-weight: bold;
+        color: var(--secondary-color);
+        margin: 10px 0;
+    }
+
+    .card {
+        border: none;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .card-header {
+        border-bottom: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .table th {
+        background-color: var(--primary-color);
+        color: white;
+        font-weight: 500;
+    }
+
+    .badge {
+        padding: 8px 12px;
+        border-radius: 20px;
+    }
+
+    .status-pending {
+        background-color: #f1c40f;
+        color: #fff;
+    }
+
+    .status-approved {
+        background-color: #2ecc71;
+        color: #fff;
+    }
+
+    .status-rejected {
+        background-color: #e74c3c;
+        color: #fff;
+    }
+</style>
+{% endblock %} 

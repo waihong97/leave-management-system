@@ -78,7 +78,9 @@ def load_user(user_id):
 # Routes
 @app.route('/')
 def index():
-    return render_template('index.html')
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    return render_template('login.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -296,6 +298,27 @@ def calendar():
         })
     
     return render_template('calendar.html', events=events)
+
+@app.route('/leave_history')
+@login_required
+def leave_history():
+    # Get leave requests for the current user
+    leave_requests = LeaveRequest.query.filter_by(user_id=current_user.id).order_by(LeaveRequest.created_at.desc()).all()
+    
+    # Get WFH requests for the current user
+    wfh_requests = WFHRequest.query.filter_by(user_id=current_user.id).order_by(WFHRequest.created_at.desc()).all()
+    
+    # Get leave balance for current year
+    current_year = datetime.now().year
+    leave_balance = LeaveBalance.query.filter_by(
+        user_id=current_user.id,
+        year=current_year
+    ).all()
+    
+    return render_template('leave_history.html', 
+                         leave_requests=leave_requests,
+                         wfh_requests=wfh_requests,
+                         leave_balance=leave_balance)
 
 def is_weekend(date):
     """Check if a date is a weekend (Saturday=5 or Sunday=6)"""
